@@ -1,5 +1,5 @@
 import { checkToken } from "@lib/checkToken";
-import { Database, Payload } from "@lib/types";
+import { Payload } from "@lib/types";
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@lib/getPrisma";
 
@@ -80,35 +80,32 @@ export const POST = async (request: NextRequest) => {
     );
   }
 ////////////////////////////////////
-  const prisma = getPrisma();
-
-  const course = await prisma.course.findUnique({
-    where: { courseNo: courseNo },
-  });
-
-  if (!course) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "Course number does not exist",
-      },
-      { status: 404 }
-    );
-  }
-
-  const enrollment = await prisma.enrollment.findFirst({
-    where: { studentId: studentId, courseNo: courseNo },
-  });
-
-  if (enrollment) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "You already registered this course",
-      },
-      { status: 409 }
-    );
-  }
+const prisma = getPrisma();
+  
+const foundcourseNo = await prisma.course.findFirst({ 
+    where: { courseNo : courseNo}
+});
+if(!foundcourseNo) {
+  return NextResponse.json(
+    {
+      ok: false,
+      message: "Course number does not exist",
+    },
+    { status: 404 }
+  );
+}
+const foundcourse = await prisma.enrollment.findFirst({ 
+  where: { studentId: studentId, courseNo: courseNo }
+});
+if(foundcourse) {
+  return NextResponse.json(
+    {
+      ok: false,
+      message: "You already registered this course",
+    },
+    { status: 409 }
+  );
+}
 
   await prisma.enrollment.create({
     data: {
