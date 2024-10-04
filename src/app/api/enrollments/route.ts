@@ -79,12 +79,56 @@ export const POST = async (request: NextRequest) => {
       { status: 400 }
     );
   }
+////////////////////////////////////
+  const prisma = getPrisma();
+
+  const course = await prisma.course.findUnique({
+    where: { courseNo: courseNo },
+  });
+
+  if (!course) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Course number does not exist",
+      },
+      { status: 404 }
+    );
+  }
+
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { studentId: studentId, courseNo: courseNo },
+  });
+
+  if (enrollment) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "You already registered this course",
+      },
+      { status: 409 }
+    );
+  }
+
+  await prisma.enrollment.create({
+    data: {
+      studentId: studentId,
+      courseNo: courseNo,
+    },
+  });
+
+  const updatedEnrollments = await prisma.enrollment.findMany({
+    where: { studentId: studentId },
+    include: { course: true },
+  });
+////////////////////////////////////
 
   // Coding in lecture
 
   return NextResponse.json({
     ok: true,
     message: "You has enrolled a course successfully",
+    enrollments: updatedEnrollments,
   });
 };
 
@@ -127,6 +171,10 @@ export const DELETE = async (request: NextRequest) => {
 
   const prisma = getPrisma();
   // Perform data delete
+  await prisma.enrollment.deleteMany({
+    where: { studentId: studentId, courseNo: courseNo },
+  });
+  
 
   return NextResponse.json({
     ok: true,
